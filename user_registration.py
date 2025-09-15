@@ -22,18 +22,57 @@ class UserRegistrationResponse:
 
 def register_user(username: str, password: str, base_url: str = "http://localhost:8000") -> UserRegistrationResponse:
     """
-    Register a new user via the /register endpoint.
+    Register a new user account in the polling system.
+
+    This function handles the complete user onboarding process for the Polly application.
+    It creates new user accounts that can participate in polls by voting and creating
+    their own polls. The registration process validates credentials, communicates with
+    the backend API, and provides detailed feedback about success or failure.
+
+    Business Intent:
+        - Enable new users to join the polling platform
+        - Validate user credentials meet system requirements
+        - Provide detailed error information for troubleshooting
+        - Support different deployment environments via configurable base_url
+        - Ensure robust error handling for production use
+
+    Use Cases:
+        - User self-registration through web forms
+        - Admin bulk user creation
+        - Integration testing with detailed result inspection
+        - Multi-environment deployments (dev, staging, prod)
 
     Args:
-        username (str): The username for the new user
-        password (str): The password for the new user
-        base_url (str): The base URL of the API (default: http://localhost:8000)
+        username (str): Unique identifier for the user account. Must be non-empty and
+                       not already exist in the system. This will be used for login
+                       and identifying the user in polls they create or vote on.
+        password (str): User's chosen password for account security. Must be non-empty.
+                       Consider enforcing password complexity requirements at the UI level.
+        base_url (str): API server endpoint. Defaults to local development server.
+                       Change this for staging/production deployments or when the
+                       API server runs on a different host/port.
 
     Returns:
-        UserRegistrationResponse: Object containing registration result
+        UserRegistrationResponse: Comprehensive result object containing:
+            - success (bool): Whether registration completed successfully
+            - user_data (dict): User account details (id, username) on success
+            - error_message (str): Human-readable error description on failure
+            - status_code (int): HTTP status code for debugging/logging
+
+        This detailed response allows callers to handle different scenarios:
+        - Show success messages with new user ID
+        - Display specific error messages to users
+        - Log failures with HTTP status codes for debugging
+        - Retry logic based on error types
 
     Raises:
-        UserRegistrationError: If registration fails due to client/server errors
+        ValueError: When input parameters are invalid (empty strings, wrong types).
+                   This indicates a programming error that should be caught during
+                   development and testing.
+        UserRegistrationError: When network/server issues prevent registration.
+                              This includes timeouts, connection failures, and
+                              unexpected server responses that require retry logic
+                              or user notification.
     """
 
     # Validate input parameters
@@ -146,19 +185,55 @@ def register_user(username: str, password: str, base_url: str = "http://localhos
 
 def register_user_simple(username: str, password: str, base_url: str = "http://localhost:8000") -> Dict[str, Any]:
     """
-    Simplified wrapper function that returns user data directly on success or raises exception on failure.
+    Register a user with simplified error handling for "fail-fast" scenarios.
+
+    This is a convenience wrapper around register_user() designed for use cases where
+    you want straightforward success/failure behavior without detailed error analysis.
+    It follows the principle of "fail fast" - either return the user data or raise
+    an exception, making it ideal for scripts, quick integrations, and scenarios
+    where detailed error handling isn't needed.
+
+    Business Intent:
+        - Provide a simple API for basic user registration needs
+        - Reduce boilerplate code when detailed error handling isn't required
+        - Enable quick prototyping and scripting
+        - Support functional programming patterns with exception-based control flow
+        - Simplify integration in contexts where try/catch is preferred over status checking
+
+    Use Cases:
+        - Command-line tools and scripts
+        - Batch user creation where failures should halt processing
+        - Simple web form handlers where generic error pages are acceptable
+        - Testing scenarios where you only care about success/failure
+        - Microservice integrations with centralized error handling
+        - Functional programming chains where exceptions propagate naturally
 
     Args:
-        username (str): The username for the new user
-        password (str): The password for the new user
-        base_url (str): The base URL of the API (default: http://localhost:8000)
+        username (str): Unique identifier for the new user account. Same validation
+                       rules as register_user() - must be non-empty and unique.
+        password (str): User's password. Same requirements as register_user().
+        base_url (str): API endpoint URL. Useful for testing against different
+                       environments or when API server location varies.
 
     Returns:
-        Dict: User data containing 'id' and 'username' fields
+        Dict[str, Any]: User account data directly from successful registration:
+            - 'id' (int): Unique user ID assigned by the system
+            - 'username' (str): Confirmed username (should match input)
+
+        This minimal return focuses on the essential data needed after registration:
+        the user ID for future API calls and username confirmation.
 
     Raises:
-        ValueError: For invalid input parameters
-        UserRegistrationError: If registration fails for any reason
+        ValueError: Input validation failed (empty/invalid parameters). Fix the
+                   calling code to provide valid inputs.
+        UserRegistrationError: Registration failed for any reason including:
+                               - Username already exists (user should try another)
+                               - Network connectivity issues (retry may help)
+                               - Server errors (check server status/logs)
+                               - Invalid API responses (check API compatibility)
+
+        The exception message contains details about the specific failure for
+        logging or user notification purposes.
     """
 
     result = register_user(username, password, base_url)
@@ -173,7 +248,29 @@ def register_user_simple(username: str, password: str, base_url: str = "http://l
 
 # Example usage and testing functions
 def main():
-    """Example usage of the registration functions"""
+    """
+    Demonstrate user registration patterns and serve as integration test.
+
+    This function showcases different approaches to user registration and serves
+    multiple purposes in the development lifecycle. It acts as both documentation
+    through working examples and as a basic integration test to verify the
+    registration system works end-to-end.
+
+    Business Intent:
+        - Provide clear usage examples for developers integrating the registration system
+        - Serve as a quick manual test during development and deployment
+        - Document best practices for error handling and user feedback
+        - Validate that the registration API is accessible and functioning
+
+    The examples demonstrate:
+        1. Detailed error handling approach using UserRegistrationResponse
+        2. Simple approach using register_user_simple with exception handling
+        3. Input validation behavior and error messages
+        4. Different error scenarios and appropriate responses
+
+    This helps developers understand when to use each function variant and
+    how to provide good user experience through proper error handling.
+    """
 
     # Example 1: Using the detailed response function
     try:
