@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
@@ -62,7 +62,7 @@ def vote_on_poll(
     poll = db.query(models.Poll).filter(models.Poll.id == poll_id).first()
     if not poll:
         raise HTTPException(status_code=404, detail="Poll not found")
-    
+
     # Check if the option exists and belongs to the poll
     option = db.query(models.Option).filter(
         models.Option.id == vote.option_id,
@@ -70,20 +70,20 @@ def vote_on_poll(
     ).first()
     if not option:
         raise HTTPException(status_code=404, detail="Option not found or does not belong to this poll")
-    
+
     # Check if the user has already voted on this poll
     existing_vote = db.query(models.Vote).join(models.Option).filter(
         models.Vote.user_id == current_user.id,
         models.Option.poll_id == poll_id
     ).first()
-    
+
     if existing_vote:
         # Update the existing vote
-        existing_vote.option_id = vote.option_id
+        setattr(existing_vote, 'option_id', vote.option_id)
         db.commit()
         db.refresh(existing_vote)
         return existing_vote
-    
+
     # Create a new vote
     new_vote = models.Vote(user_id=current_user.id, option_id=vote.option_id)
     db.add(new_vote)
@@ -98,7 +98,7 @@ def get_poll_results(poll_id: int, db: Session = Depends(get_db)):
     poll = db.query(models.Poll).filter(models.Poll.id == poll_id).first()
     if not poll:
         raise HTTPException(status_code=404, detail="Poll not found")
-    
+
     # Get the options with vote counts
     results = db.query(
         models.Option.id,
@@ -107,13 +107,13 @@ def get_poll_results(poll_id: int, db: Session = Depends(get_db)):
     ).outerjoin(models.Vote).filter(
         models.Option.poll_id == poll_id
     ).group_by(models.Option.id).all()
-    
+
     # Format the results
     formatted_results = [
         {"option_id": option_id, "text": text, "vote_count": vote_count}
         for option_id, text, vote_count in results
     ]
-    
+
     return {"poll_id": poll_id, "question": poll.question, "results": formatted_results}
 
 
@@ -128,18 +128,18 @@ def create_poll(
         raise HTTPException(
             status_code=400, detail="At least two options are required for a poll"
         )
-    
+
     # Create the poll
     new_poll = models.Poll(question=poll.question, owner_id=current_user.id)
     db.add(new_poll)
     db.commit()
     db.refresh(new_poll)
-    
+
     # Create the options for the poll
     for option_text in poll.options:
         option = models.Option(text=option_text, poll_id=new_poll.id)
         db.add(option)
-    
+
     db.commit()
     db.refresh(new_poll)
     return new_poll
